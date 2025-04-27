@@ -31,7 +31,7 @@ from typing import Optional
 token = os.environ['ETHERYA']
 intents = discord.Intents.all()
 start_time = time.time()
-bot = commands.Bot(command_prefix="!!", intents=intents, help_command=None)
+bot = commands.Bot(command_prefix=".", intents=intents, help_command=None)
 
 #Configuration du Bot:
 # --- ID Owner Bot ---
@@ -42,6 +42,10 @@ GUILD_ID = 1034007767050104892
 # --- ID Etherya Partenariats ---
 partnership_channel_id = 1355158081855688745
 ROLE_ID = 1355157749994098860
+
+# -- ID TICKET --
+TRANSCRIPT_CHANNEL_ID = 1355158107956707498
+SUPPORT_ROLE_ID = 1355157686815293441
 
 # --- ID Etherya ---
 ETHERYA_SERVER_ID = 1034007767050104892
@@ -143,6 +147,7 @@ collection58 = db['cd_eveil_uo'] #Stock les cd d'eveil du Dragon
 collection59 = db['message_jour'] #Stock les message des membres chaque jour
 collection60 = db['cd_wobservation'] #Stock les cd de W Observation
 collection61 = db['cd_observation']
+collection62 = db['ether_ticket'] 
 
 # Fonction pour vérifier si l'utilisateur possède un item (fictif, à adapter à ta DB)
 async def check_user_has_item(user: discord.Member, item_id: int):
@@ -228,6 +233,7 @@ def load_guild_settings(guild_id):
     message_jour_data = collection59.find_one({"guild_id": guild_id}) or {}
     cd_wobservation_data = collection60.find_one({"guild_id": guild_id}) or {}
     cd_observation_data = collection61.find_one({"guild_id": guild_id}) or {}
+    ether_ticket_data = collection62.find_one({"guild_id": guildu_id}) or {}
     
     # Débogage : Afficher les données de setup
     print(f"Setup data for guild {guild_id}: {setup_data}")
@@ -293,7 +299,8 @@ def load_guild_settings(guild_id):
         "cd_eveil_uo": cd_eveil_uo_data,
         "message_jour": message_jour_data,
         "cd_wobservation": cd_wobservation_data,
-        "cd_observation": cd_observation_data
+        "cd_observation": cd_observation_data,
+        "ether_ticket": ether_ticket_data
     }
 
     return combined_data
@@ -301,6 +308,8 @@ def load_guild_settings(guild_id):
 # --- Initialisation au démarrage ---
 @bot.event
 async def on_ready():
+    bot.add_view(TicketView(author_id=ISEY_ID))  # pour bouton "Passé Commande"
+    bot.add_view(ClaimCloseView())               # pour "Claim" et "Fermer"
     print(f"{bot.user.name} est connecté.")
     bot.uptime = time.time()
     activity = discord.Activity(
@@ -1015,6 +1024,172 @@ async def on_guild_update(before, after):
             embed.timestamp = discord.utils.utcnow()
 
             await bot_channel.send(embed=embed)
+
+
+# --- MODAL POUR FERMETURE ---
+class TicketModal(ui.Modal, title="Fermer le ticket"):
+    reason = ui.TextInput(label="Raison de fermeture", style=discord.TextStyle.paragraph)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        channel = interaction.channel
+        guild = interaction.guild
+        reason = self.reason.value
+
+        transcript_channel = guild.get_channel(TRANSCRIPT_CHANNEL_ID)
+
+        # Génération du transcript
+        messages = [msg async for msg in channel.history(limit=None)]
+        transcript_text = "\n".join([
+            f"{msg.created_at.strftime('%Y-%m-%d %H:%M')} - {msg.author}: {msg.content}"
+            for msg in messages if msg.content
+        ])
+        file = discord.File(fp=io.StringIO(transcript_text), filename="transcript.txt")
+
+        # Récupération de qui a ouvert et claim
+        ether_ticket_data = collection62.find_one({"channel_id": str(channel.id)})
+
+        opened_by = guild.get_member(int(ticket_data["user_id"])) if ticket_data else None
+        claimed_by = None
+        # Recherche dans le dernier message envoyé contenant l'embed de création
+        async for msg in channel.history(limit=50):
+            if msg.embeds:
+                embed = msg.embeds[0]
+                if embed.footer and "Claimé par" in embed.footer.text:
+                    user_id = int(embed.footer.text.split("Claimé par ")[-1].replace(">", "").replace("<@", ""))
+                    claimed_by = guild.get_member(user_id)
+                    break
+
+        # Log dans le canal transcript
+        embed_log = discord.Embed(
+            title="📁 Ticket Fermé",
+            color=discord.Color.red()
+        )
+        embed_log.add_field(name="Ouvert par", value=opened_by.mention if opened_by else "Inconnu", inline=True)
+        embed_log.add_field(name="Claimé par", value=claimed_by.mention if claimed_by else "Non claim", inline=True)
+        embed_log.add_field(name="Fermé par", value=interaction.user.mention, inline=True)
+        embed_log.add_field(name="Raison", value=reason, inline=False)
+        embed_log.set_footer(text=f"Ticket: {channel.name} | ID: {channel.id}")
+        embed_log.timestamp = discord.utils.utcnow()
+
+        await transcript_channel.send(embed=embed_log, file=file)
+
+        # Suppression du channel
+        await interaction.response.send_message("✅ Ticket fermé.", ephemeral=True)
+        await channel.delete()
+
+# --- VIEW AVEC CLAIM & FERMETURE ---
+class ClaimCloseView(ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @ui.button(label="Claim", style=ButtonStyle.blurple, custom_id="claim")
+    async def claim_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if SUPPORT_ROLE_ID not in [role.id for role in interaction.user.roles]:
+            return await interaction.response.send_message("❌ Tu n'as pas la permission de claim.", ephemeral=True)
+
+        # Désactive le bouton
+        button.disabled = True
+        await interaction.message.edit(view=self)
+
+        # Ajoute une note dans le footer de l'embed
+        embed = interaction.message.embeds[0]
+        embed.set_footer(text=f"Claimé par {interaction.user.mention}")
+        await interaction.message.edit(embed=embed)
+
+        await interaction.response.send_message(f"📌 Ticket claim par {interaction.user.mention}.")
+
+    @ui.button(label="Fermer", style=ButtonStyle.red, custom_id="close")
+    async def close_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(TicketModal())
+
+class TicketView(ui.View):
+    def __init__(self, author_id):
+        super().__init__(timeout=None)
+        self.author_id = author_id
+
+    @ui.button(label="Support Finance", style=ButtonStyle.success, custom_id="open_ticket")
+    async def open_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
+    
+        guild = interaction.guild
+        category = guild.get_channel(1355157940243529789)  # ← Catégorie spécifique
+
+        overwrites = {
+            guild.default_role: discord.PermissionOverwrite(view_channel=False),
+            interaction.user: discord.PermissionOverwrite(view_channel=True, send_messages=True),
+            guild.me: discord.PermissionOverwrite(view_channel=True, send_messages=True),
+        }
+
+        channel_name = f"︱🚫・{interaction.user.name}"
+        ticket_channel = await guild.create_text_channel(
+            name=channel_name,
+            overwrites=overwrites,
+            category=category  # ← Ajout ici
+        )
+
+        # Mention puis suppression du message
+        await ticket_channel.send("@everyone")
+        await ticket_channel.purge(limit=1)
+
+        # Embed d'accueil
+        embed = discord.Embed(
+            title="Bienvenue dans votre ticket commande",
+            description=(
+                """Bienvenue dans le support des Finances !
+                Avant de continuer, merci de respecter ces règles :
+                Restez respectueux envers l’équipe.
+                Répondez rapidement pour éviter de ralentir le traitement de votre demande.
+
+                Informations à fournir dès l’ouverture du ticket :
+                La raison de votre demande
+
+                Temps de réponse estimé : 1 à 5 minutes.
+
+                Merci de votre patience et de votre compréhension !"""
+            ),
+            color=0x5865F2
+        )
+        embed.set_image(url="https://github.com/Iseyg91/KNSKS-ET/blob/main/Images_GITHUB/Capture_decran_2025-02-15_231405.png?raw=true")
+
+        # Envoi de l’embed avec les boutons
+        await ticket_channel.send(embed=embed, view=ClaimCloseView())
+
+        # Sauvegarde MongoDB
+        collection16.insert_one({
+            "guild_id": str(guild.id),
+            "user_id": str(interaction.user.id),
+            "channel_id": str(ticket_channel.id),
+            "opened_at": datetime.utcnow(),
+            "status": "open"
+        })
+
+        await interaction.response.send_message(f"✅ Ton ticket a été créé : {ticket_channel.mention}", ephemeral=True)
+
+# --- COMMANDE PANEL ---
+@bot.command(name="panel")
+async def panel(ctx):
+    if ctx.author.id != ISEY_ID:
+        return await ctx.send("❌ Tu n'es pas autorisé à utiliser cette commande.")
+
+    embed = discord.Embed(
+        title="Support Finanace",
+        description="Besoin d'aide ou de contacter un Trésorier pour un achat, une vente ou des questions fiscales ? Ouvrez un ticket !",
+        color=0x2ecc71
+    )
+    await ctx.send(embed=embed, view=TicketView(author_id=ctx.author.id))
+
+# --- PANEL2 ---
+@bot.command(name="panel2")
+async def panel2(ctx):
+    if ctx.author.id != ISEY_ID:
+        return await ctx.send("❌ Tu n'es pas autorisé à utiliser cette commande.")
+
+    embed = discord.Embed(
+        title="Support ",
+        description="Ouvrez un ticket afin de contacter le Staff de Etherya !",
+        color=0x2ecc71
+    )
+    # Mise à jour du bouton avec l'emoji 🎨
+    await ctx.send(embed=embed, view=TicketView(author_id=ctx.author.id))
 
 # Token pour démarrer le bot (à partir des secrets)
 # Lancer le bot avec ton token depuis l'environnement  
