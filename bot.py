@@ -950,7 +950,7 @@ class TicketView(ui.View):
         await ticket_channel.send(embed=embed, view=ClaimCloseView())
 
         # Sauvegarde MongoDB
-        collection16.insert_one({
+        collection62.insert_one({
             "guild_id": str(guild.id),
             "user_id": str(interaction.user.id),
             "channel_id": str(ticket_channel.id),
