@@ -1173,8 +1173,12 @@ async def panel(ctx):
     embed = discord.Embed(
         title="Support Finanace",
         description="Besoin d'aide ou de contacter un Trésorier pour un achat, une vente ou des questions fiscales ? Ouvrez un ticket !",
-        color=0x2ecc71
+        color=0x3498db
     )
+    
+    # Ajouter une image à l'embed
+    embed.set_image(url="https://github.com/Iseyg91/KNSKS-ET/blob/main/Images_GITHUB/Capture_decran_2025-02-15_231405.png?raw=true")
+
     await ctx.send(embed=embed, view=TicketView(author_id=ctx.author.id))
 
 # --- PANEL2 ---
