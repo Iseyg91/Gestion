@@ -1201,7 +1201,7 @@ async def vote_blacklist(ctx, member: discord.Member, reason: str):
     await vote_message.add_reaction("<:non:1176229380222111879>")
 
     # Attente de 24 heures
-    await asyncio.sleep(86400)
+    await asyncio.sleep(300)
 
     # Récupérer les réactions
     message = await vote_message.channel.fetch_message(vote_message.id)
