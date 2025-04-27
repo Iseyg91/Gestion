@@ -1182,9 +1182,9 @@ async def getbotinfo(ctx):
     except Exception as e:
         print(f"Erreur dans la commande `getbotinfo` : {e}")
 
-@bot.command()
+@bot.tree.command(name="vote-blacklist", description="Lance un vote pour ajouter un membre à la blacklist")
 @commands.has_permissions(administrator=True)
-async def vote_blacklist(ctx, member: discord.Member, reason: str):
+async def vote_blacklist(interaction: discord.Interaction, member: discord.Member, reason: str):
     # Créer l'embed de vote
     embed = discord.Embed(
         title="Vote pour Blacklist",
@@ -1194,14 +1194,14 @@ async def vote_blacklist(ctx, member: discord.Member, reason: str):
     embed.set_image(url="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR3FCHVv9urcHsEKQNR8XRtWE125c_scHlIaw&s")
     
     # Envoi du message avec un ping everyone
-    vote_message = await ctx.send(f"@everyone Nouveau vote de blacklist pour {member.mention}", embed=embed)
+    vote_message = await interaction.channel.send(f"@everyone Nouveau vote de blacklist pour {member.mention}", embed=embed)
 
     # Ajouter les réactions Yes et No
     await vote_message.add_reaction("<:oui:1176229327721988136>")
     await vote_message.add_reaction("<:non:1176229380222111879>")
 
     # Attente de 24 heures
-    await asyncio.sleep(300)
+    await asyncio.sleep(86400)
 
     # Récupérer les réactions
     message = await vote_message.channel.fetch_message(vote_message.id)
@@ -1211,7 +1211,7 @@ async def vote_blacklist(ctx, member: discord.Member, reason: str):
     # Si majorité pour Oui, ajout à la blacklist
     if len(yes_reactions) > len(no_reactions):
         # Ajouter à la blacklist dans MongoDB
-        collection.update_one({"guild_id": ctx.guild.id}, {"$push": {"blacklist": member.id}}, upsert=True)
+        collection.update_one({"guild_id": interaction.guild.id}, {"$push": {"blacklist": member.id}}, upsert=True)
         
         # Confirmation dans le salon de blacklist
         blacklist_embed = discord.Embed(
@@ -1223,15 +1223,14 @@ async def vote_blacklist(ctx, member: discord.Member, reason: str):
         blacklist_channel = bot.get_channel(1366062696859959338)
         await blacklist_channel.send(embed=blacklist_embed)
         
-        await ctx.send(f"{member.mention} a été ajouté à la blacklist.")
+        await interaction.response.send_message(f"{member.mention} a été ajouté à la blacklist.")
     else:
-        await ctx.send(f"Le vote pour blacklist de {member.mention} a échoué.")
+        await interaction.response.send_message(f"Le vote pour blacklist de {member.mention} a échoué.")
 
-
-@bot.command()
+@bot.tree.command(name="list-blacklist", description="Affiche la liste des membres blacklistés")
 @commands.has_permissions(administrator=True)
-async def list_blacklist(ctx):
-    guild_data = collection.find_one({"guild_id": ctx.guild.id})
+async def list_blacklist(interaction: discord.Interaction):
+    guild_data = collection.find_one({"guild_id": interaction.guild.id})
     
     if guild_data and "blacklist" in guild_data:
         blacklist_members = guild_data["blacklist"]
@@ -1242,11 +1241,11 @@ async def list_blacklist(ctx):
                 description="\n".join([f"<@{member_id}>" for member_id in blacklist_members]),
                 color=discord.Color.dark_red()
             )
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
         else:
-            await ctx.send("Aucun membre n'est actuellement blacklisté.")
+            await interaction.response.send_message("Aucun membre n'est actuellement blacklisté.")
     else:
-        await ctx.send("Aucun membre n'est actuellement blacklisté.")
+        await interaction.response.send_message("Aucun membre n'est actuellement blacklisté.")
 
 # Token pour démarrer le bot (à partir des secrets)
 # Lancer le bot avec ton token depuis l'environnement  
