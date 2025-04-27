@@ -970,10 +970,12 @@ class TicketView(ui.View):
         guild = interaction.guild
         category = guild.get_channel(1355157940243529789)  # ← Catégorie spécifique
 
+        # Permissions pour l'auteur, le bot, et le rôle de support
         overwrites = {
-            guild.default_role: discord.PermissionOverwrite(view_channel=False),
-            interaction.user: discord.PermissionOverwrite(view_channel=True, send_messages=True),
-            guild.me: discord.PermissionOverwrite(view_channel=True, send_messages=True),
+            guild.default_role: discord.PermissionOverwrite(view_channel=False),  # Par défaut, personne ne peut voir
+            interaction.user: discord.PermissionOverwrite(view_channel=True, send_messages=True),  # L'utilisateur peut parler
+            guild.me: discord.PermissionOverwrite(view_channel=True, send_messages=True),  # Le bot peut parler
+            guild.get_role(SUPPORT_ROLE_ID): discord.PermissionOverwrite(view_channel=True, send_messages=True)  # Le rôle de support peut voir et parler
         }
 
         channel_name = f"︱🚫・{interaction.user.name}"
