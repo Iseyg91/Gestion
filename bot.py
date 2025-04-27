@@ -87,16 +87,19 @@ db = client['Cass-Eco2']
 
 # Collections
 collection62 = db['ether_ticket'] 
+collection = db['ether_black']
 
 def load_guild_settings(guild_id):
     # Charger les données de la collection principale
-    ether_ticket_data = collection62.find_one({"guild_id": guildu_id}) or {}
+    ether_ticket_data = collection62.find_one({"guild_id": guild_id}) or {}
+    ether_black_data = collection.find_one({"guild_id": guild_id}) or {}
     
     # Débogage : Afficher les données de setup
     print(f"Setup data for guild {guild_id}: {setup_data}")
 
     combined_data = {
-        "ether_ticket": ether_ticket_data
+        "ether_ticket": ether_ticket_data,
+        "ether_black": ether_black_data
     }
 
     return combined_data
@@ -1178,6 +1181,72 @@ async def getbotinfo(ctx):
 
     except Exception as e:
         print(f"Erreur dans la commande `getbotinfo` : {e}")
+
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def vote_blacklist(ctx, member: discord.Member, reason: str):
+    # Créer l'embed de vote
+    embed = discord.Embed(
+        title="Vote pour Blacklist",
+        description=f"**Cible:** {member.mention}\n**ID:** {member.id}\n**Raison:** {reason}",
+        color=discord.Color.red()
+    )
+    embed.set_image(url="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR3FCHVv9urcHsEKQNR8XRtWE125c_scHlIaw&s")
+    
+    # Envoi du message avec un ping everyone
+    vote_message = await ctx.send(f"@everyone Nouveau vote de blacklist pour {member.mention}", embed=embed)
+
+    # Ajouter les réactions Yes et No
+    await vote_message.add_reaction("<:oui:1176229327721988136>")
+    await vote_message.add_reaction("<:non:1176229380222111879>")
+
+    # Attente de 24 heures
+    await asyncio.sleep(86400)
+
+    # Récupérer les réactions
+    message = await vote_message.channel.fetch_message(vote_message.id)
+    yes_reactions = [reaction for reaction in message.reactions if str(reaction.emoji) == "<:oui:1176229327721988136>"]
+    no_reactions = [reaction for reaction in message.reactions if str(reaction.emoji) == "<:non:1176229380222111879>"]
+
+    # Si majorité pour Oui, ajout à la blacklist
+    if len(yes_reactions) > len(no_reactions):
+        # Ajouter à la blacklist dans MongoDB
+        collection.update_one({"guild_id": ctx.guild.id}, {"$push": {"blacklist": member.id}}, upsert=True)
+        
+        # Confirmation dans le salon de blacklist
+        blacklist_embed = discord.Embed(
+            title="Blacklist Confirmée",
+            description=f"{member.mention} a été ajouté à la blacklist pour la raison suivante : {reason}",
+            color=discord.Color.dark_red()
+        )
+        blacklist_embed.set_image(url="https://www.shutterstock.com/image-illustration/blacklist-text-on-black-grungy-260nw-1894695871.jpg")
+        blacklist_channel = bot.get_channel(1366062696859959338)
+        await blacklist_channel.send(embed=blacklist_embed)
+        
+        await ctx.send(f"{member.mention} a été ajouté à la blacklist.")
+    else:
+        await ctx.send(f"Le vote pour blacklist de {member.mention} a échoué.")
+
+
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def list_blacklist(ctx):
+    guild_data = collection.find_one({"guild_id": ctx.guild.id})
+    
+    if guild_data and "blacklist" in guild_data:
+        blacklist_members = guild_data["blacklist"]
+        if blacklist_members:
+            # Créer l'embed pour afficher la liste des blacklistés
+            embed = discord.Embed(
+                title="Liste des Blacklistés",
+                description="\n".join([f"<@{member_id}>" for member_id in blacklist_members]),
+                color=discord.Color.dark_red()
+            )
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send("Aucun membre n'est actuellement blacklisté.")
+    else:
+        await ctx.send("Aucun membre n'est actuellement blacklisté.")
 
 # Token pour démarrer le bot (à partir des secrets)
 # Lancer le bot avec ton token depuis l'environnement  
