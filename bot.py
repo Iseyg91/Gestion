@@ -1250,6 +1250,43 @@ async def list_blacklist(interaction: discord.Interaction):
     else:
         await interaction.response.send_message("Aucun membre n'est actuellement blacklisté.")
 
+@bot.tree.command(name="transfer")
+async def transfer_ticket(interaction: discord.Interaction, member: discord.Member):
+    # Vérification si l'utilisateur a le rôle SUPPORT_ROLE_ID
+    if SUPPORT_ROLE_ID not in [role.id for role in interaction.user.roles]:
+        return await interaction.response.send_message("❌ Tu n'as pas la permission de transférer ce ticket.", ephemeral=True)
+
+    # Vérification que le membre mentionné est dans le même canal
+    if interaction.channel.id != collection62.find_one({"channel_id": str(interaction.channel.id)})["channel_id"]:
+        return await interaction.response.send_message("❌ Ce n'est pas un canal de ticket valide.", ephemeral=True)
+
+    # Vérification que le membre mentionné n'est pas déjà le claim
+    ether_ticket_data = collection62.find_one({"channel_id": str(interaction.channel.id)})
+    if str(member.id) == ether_ticket_data["user_id"]:
+        return await interaction.response.send_message(f"❌ Ce ticket est déjà géré par {member.mention}.", ephemeral=True)
+
+    # Mise à jour de l'embed du ticket pour refléter le transfert
+    embed = interaction.message.embeds[0]
+    embed.set_footer(text=f"Claimé par {member.mention}")
+
+    # Envoi du message de confirmation
+    await interaction.message.edit(embed=embed)
+    
+    # Sauvegarde de l'historique dans la base de données
+    collection62.update_one(
+        {"channel_id": str(interaction.channel.id)},
+        {"$set": {"user_id": str(member.id)}}
+    )
+
+    # Annonce dans le canal
+    await interaction.response.send_message(f"✅ Le ticket a été transféré à {member.mention}.")
+
+    # Optionnel: Envoyer un message privé à la personne à qui le ticket a été transféré
+    try:
+        await member.send(f"🚨 Un ticket a été transféré vers toi. Tu es maintenant en charge du ticket dans {interaction.channel.mention}.")
+    except discord.Forbidden:
+        await interaction.response.send_message("⚠️ Je n'ai pas pu envoyer un message privé à ce membre.")
+
 # Token pour démarrer le bot (à partir des secrets)
 # Lancer le bot avec ton token depuis l'environnement  
 keep_alive()
