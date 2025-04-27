@@ -1033,7 +1033,7 @@ async def panel(ctx):
         return await ctx.send("❌ Tu n'es pas autorisé à utiliser cette commande.")
 
     embed = discord.Embed(
-        title="Support Finanace",
+        title="Support Finance",
         description="Besoin d'aide ou de contacter un Trésorier pour un achat, une vente ou des questions fiscales ? Ouvrez un ticket !",
         color=0x6A0DAD
     )
