@@ -833,13 +833,32 @@ class TicketModal(ui.Modal, title="Fermer le ticket"):
 
         transcript_channel = guild.get_channel(TRANSCRIPT_CHANNEL_ID)
 
-        # Génération du transcript
+        # Génération du transcript et récupération des utilisateurs uniques
         messages = [msg async for msg in channel.history(limit=None)]
         transcript_text = "\n".join([
             f"{msg.created_at.strftime('%Y-%m-%d %H:%M')} - {msg.author}: {msg.content}"
             for msg in messages if msg.content
         ])
         file = discord.File(fp=io.StringIO(transcript_text), filename="transcript.txt")
+
+        # Récupération des utilisateurs ayant parlé
+        unique_users = set(msg.author for msg in messages if not msg.author.bot)
+        user_mentions = ", ".join(user.mention for user in unique_users)
+
+        # Données supplémentaires
+        total_messages = len(messages)
+        intervenants_count = len(unique_users)
+        first_message = messages[-1].author if messages else None
+        last_message = messages[0].author if messages else None
+
+        if messages:
+            ticket_duration = messages[0].created_at - messages[-1].created_at
+            days, seconds = ticket_duration.days, ticket_duration.seconds
+            hours = seconds // 3600
+            minutes = (seconds % 3600) // 60
+            duration_str = f"{days}j {hours}h {minutes}m"
+        else:
+            duration_str = "Inconnu"
 
         # Récupération de qui a ouvert et claim
         ether_ticket_data = collection62.find_one({"channel_id": str(channel.id)})
@@ -864,6 +883,18 @@ class TicketModal(ui.Modal, title="Fermer le ticket"):
         embed_log.add_field(name="Claimé par", value=claimed_by.mention if claimed_by else "Non claim", inline=True)
         embed_log.add_field(name="Fermé par", value=interaction.user.mention, inline=True)
         embed_log.add_field(name="Raison", value=reason, inline=False)
+
+        embed_log.add_field(name="Utilisateurs", value=user_mentions if user_mentions else "Aucun utilisateur", inline=False)
+        embed_log.add_field(name="Nombre de messages", value=str(total_messages), inline=True)
+        embed_log.add_field(name="Nombre d'intervenants", value=str(intervenants_count), inline=True)
+        embed_log.add_field(name="Durée du ticket", value=duration_str, inline=True)
+
+        if first_message:
+            embed_log.add_field(name="Premier message par", value=first_message.mention, inline=True)
+        if last_message:
+            embed_log.add_field(name="Dernier message par", value=last_message.mention, inline=True)
+
+        embed_log.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/2991/2991148.png")  # Petite icône dossier
         embed_log.set_footer(text=f"Ticket: {channel.name} | ID: {channel.id}")
         embed_log.timestamp = discord.utils.utcnow()
 
