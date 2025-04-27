@@ -898,16 +898,12 @@ class TicketModal(ui.Modal, title="Fermer le ticket"):
             inline=False
         )
 
-        embed_log.add_field(name="\u200b", value="\u200b", inline=False)  # Espace visuel
-
         # Partie utilisateurs
         embed_log.add_field(
             name="🗣️ Participants",
             value=user_mentions,
             inline=False
         )
-
-        embed_log.add_field(name="\u200b", value="\u200b", inline=False)
 
         # Partie statistiques
         embed_log.add_field(
@@ -922,8 +918,6 @@ class TicketModal(ui.Modal, title="Fermer le ticket"):
             inline=False
         )
 
-        embed_log.add_field(name="\u200b", value="\u200b", inline=False)
-
         # Partie premier/dernier message
         if first_author:
             embed_log.add_field(name="🔹 Premier message par", value=first_author.mention, inline=True)
@@ -934,6 +928,7 @@ class TicketModal(ui.Modal, title="Fermer le ticket"):
         embed_log.set_footer(text=f"Ticket: {channel.name} | ID: {channel.id}")
         embed_log.timestamp = discord.utils.utcnow()
 
+        # Envoi de l'embed et du fichier transcript
         await transcript_channel.send(embed=embed_log, file=file)
 
         await interaction.response.send_message("✅ Ticket fermé.", ephemeral=True)
