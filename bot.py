@@ -841,13 +841,15 @@ class TicketModal(ui.Modal, title="Fermer le ticket"):
         ])
         file = discord.File(fp=io.StringIO(transcript_text), filename="transcript.txt")
 
-        # Récupération des utilisateurs ayant parlé
+        # Données utilisateurs
         unique_users = set(msg.author for msg in messages if not msg.author.bot)
         user_mentions = ", ".join(user.mention for user in unique_users)
 
-        # Données supplémentaires
         total_messages = len(messages)
         intervenants_count = len(unique_users)
+        total_attachments = sum(len(msg.attachments) for msg in messages)
+        bot_messages = sum(1 for msg in messages if msg.author.bot)
+
         first_message = messages[-1].author if messages else None
         last_message = messages[0].author if messages else None
 
@@ -865,7 +867,7 @@ class TicketModal(ui.Modal, title="Fermer le ticket"):
 
         opened_by = guild.get_member(int(ether_ticket_data["user_id"])) if ether_ticket_data else None
         claimed_by = None
-        # Recherche dans le dernier message envoyé contenant l'embed de création
+        # Recherche dans les 50 derniers messages pour le claim
         async for msg in channel.history(limit=50):
             if msg.embeds:
                 embed = msg.embeds[0]
@@ -876,25 +878,32 @@ class TicketModal(ui.Modal, title="Fermer le ticket"):
 
         # Log dans le canal transcript
         embed_log = discord.Embed(
-            title="📁 Ticket Fermé",
-            color=discord.Color.red()
+            title=f"{interaction.user.name}",
+            color=discord.Color.red(),
+            description=f"**Raison de fermeture :** {reason}"
         )
+        embed_log.set_author(name=interaction.user.name, icon_url=interaction.user.display_avatar.url)
+        embed_log.set_thumbnail(url=interaction.client.user.display_avatar.url)
+
         embed_log.add_field(name="Ouvert par", value=opened_by.mention if opened_by else "Inconnu", inline=True)
         embed_log.add_field(name="Claimé par", value=claimed_by.mention if claimed_by else "Non claim", inline=True)
         embed_log.add_field(name="Fermé par", value=interaction.user.mention, inline=True)
-        embed_log.add_field(name="Raison", value=reason, inline=False)
 
-        embed_log.add_field(name="Utilisateurs", value=user_mentions if user_mentions else "Aucun utilisateur", inline=False)
-        embed_log.add_field(name="Nombre de messages", value=str(total_messages), inline=True)
-        embed_log.add_field(name="Nombre d'intervenants", value=str(intervenants_count), inline=True)
-        embed_log.add_field(name="Durée du ticket", value=duration_str, inline=True)
+        embed_log.add_field(name="Utilisateurs ayant parlé", value=user_mentions if user_mentions else "Aucun", inline=False)
+
+        embed_log.add_field(name="Statistiques 📊", value=(
+            f"• **Nombre de messages :** {total_messages}\n"
+            f"• **Nombre d'intervenants :** {intervenants_count}\n"
+            f"• **Nombre de fichiers envoyés :** {total_attachments}\n"
+            f"• **Messages envoyés par bots :** {bot_messages}\n"
+            f"• **Durée du ticket :** {duration_str}"
+        ), inline=False)
 
         if first_message:
             embed_log.add_field(name="Premier message par", value=first_message.mention, inline=True)
         if last_message:
             embed_log.add_field(name="Dernier message par", value=last_message.mention, inline=True)
 
-        embed_log.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/2991/2991148.png")  # Petite icône dossier
         embed_log.set_footer(text=f"Ticket: {channel.name} | ID: {channel.id}")
         embed_log.timestamp = discord.utils.utcnow()
 
