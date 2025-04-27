@@ -172,7 +172,7 @@ private_threads = {}  # Stocke les fils privés des nouveaux membres
 
 # Liste des salons à pinguer
 salon_ids = [
-    1355198748296351854
+    1355158116903419997
 ]
 
 class GuideView(View):
@@ -324,7 +324,7 @@ async def on_member_join(member):
                     print("Une erreur est survenue lors de l'envoi du message.")
 
         # Création d'un fil privé pour le membre
-        channel_id = 1355158120095027220  # Remplace par l'ID du salon souhaité
+        channel_id = 1355198748296351854  # Remplace par l'ID du salon souhaité
         channel = bot.get_channel(channel_id)
 
         if channel and isinstance(channel, discord.TextChannel):
