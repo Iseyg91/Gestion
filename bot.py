@@ -1187,26 +1187,28 @@ async def getbotinfo(ctx):
 async def vote_blacklist(interaction: discord.Interaction, member: discord.Member, reason: str):
     # Créer l'embed de vote
     embed = discord.Embed(
-        title="Vote pour Blacklist",
+        title="🚫 Vote pour ajouter à la Blacklist 🚫",
         description=f"**Cible:** {member.mention}\n**ID:** {member.id}\n**Raison:** {reason}",
         color=discord.Color.red()
     )
-    embed.set_image(url="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR3FCHVv9urcHsEKQNR8XRtWE125c_scHlIaw&s")
-    
-    # Envoi du message avec un ping everyone
-    vote_message = await interaction.channel.send(f"@everyone Nouveau vote de blacklist pour {member.mention}", embed=embed)
+    embed.set_image(url="https://example.com/your-image.png")  # Remplace par une image pertinente
+    embed.set_footer(text="Le vote dure 24 heures.")
+
+    # Spécifier le salon où envoyer le message (ID du salon à modifier)
+    vote_channel = bot.get_channel(1366062497307693190)  # Remplace avec l'ID du salon voulu
+    vote_message = await vote_channel.send(f"@everyone Nouveau vote de blacklist pour {member.mention}", embed=embed)
 
     # Ajouter les réactions Yes et No
-    await vote_message.add_reaction("<:oui:1176229327721988136>")
-    await vote_message.add_reaction("<:non:1176229380222111879>")
+    await vote_message.add_reaction("✅")  # Emoji pour Oui
+    await vote_message.add_reaction("❌")  # Emoji pour Non
 
-    # Attente de 24 heures
+    # Attente de 24 heures pour la fin du vote
     await asyncio.sleep(86400)
 
     # Récupérer les réactions
     message = await vote_message.channel.fetch_message(vote_message.id)
-    yes_reactions = [reaction for reaction in message.reactions if str(reaction.emoji) == "<:oui:1176229327721988136>"]
-    no_reactions = [reaction for reaction in message.reactions if str(reaction.emoji) == "<:non:1176229380222111879>"]
+    yes_reactions = [reaction for reaction in message.reactions if str(reaction.emoji) == "✅"]
+    no_reactions = [reaction for reaction in message.reactions if str(reaction.emoji) == "❌"]
 
     # Si majorité pour Oui, ajout à la blacklist
     if len(yes_reactions) > len(no_reactions):
@@ -1215,12 +1217,12 @@ async def vote_blacklist(interaction: discord.Interaction, member: discord.Membe
         
         # Confirmation dans le salon de blacklist
         blacklist_embed = discord.Embed(
-            title="Blacklist Confirmée",
+            title="🛑 Blacklist Confirmée 🛑",
             description=f"{member.mention} a été ajouté à la blacklist pour la raison suivante : {reason}",
             color=discord.Color.dark_red()
         )
-        blacklist_embed.set_image(url="https://www.shutterstock.com/image-illustration/blacklist-text-on-black-grungy-260nw-1894695871.jpg")
-        blacklist_channel = bot.get_channel(1366062696859959338)
+        blacklist_embed.set_image(url="https://example.com/blacklist-confirmation-image.jpg")  # Remplace par une image pertinente
+        blacklist_channel = bot.get_channel(1366062696859959338)  # Remplace avec l'ID de ton salon de blacklist
         await blacklist_channel.send(embed=blacklist_embed)
         
         await interaction.response.send_message(f"{member.mention} a été ajouté à la blacklist.")
@@ -1237,10 +1239,11 @@ async def list_blacklist(interaction: discord.Interaction):
         if blacklist_members:
             # Créer l'embed pour afficher la liste des blacklistés
             embed = discord.Embed(
-                title="Liste des Blacklistés",
+                title="🖤 Liste des Membres Blacklistés 🖤",
                 description="\n".join([f"<@{member_id}>" for member_id in blacklist_members]),
                 color=discord.Color.dark_red()
             )
+            embed.set_footer(text="Voici les membres blacklistés.")
             await interaction.response.send_message(embed=embed)
         else:
             await interaction.response.send_message("Aucun membre n'est actuellement blacklisté.")
