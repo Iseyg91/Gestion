@@ -967,7 +967,7 @@ class TicketView(ui.View):
         super().__init__(timeout=None)
         self.author_id = author_id
 
-    @ui.button(label="Support Finance", style=ButtonStyle.primary, custom_id="open_ticket")
+    @ui.button(label="Support", style=ButtonStyle.primary, custom_id="open_ticket")
     async def open_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
     
         guild = interaction.guild
@@ -1052,11 +1052,13 @@ async def panel2(ctx):
     embed = discord.Embed(
         title="Support ",
         description="Ouvrez un ticket afin de contacter le Staff de Etherya !",
-        color=0x2ecc71
+        color=0x6A0DAD
     )
-    # Mise à jour du bouton avec l'emoji 🎨
-    await ctx.send(embed=embed, view=TicketView(author_id=ctx.author.id))
+    
+    # Ajouter une image à l'embed
+    embed.set_image(url="https://github.com/Iseyg91/KNSKS-ET/blob/main/Images_GITHUB/Capture_decran_2025-02-15_231405.png?raw=true")
 
+    await ctx.send(embed=embed, view=TicketView(author_id=ctx.author.id))
 
 # Vérification si l'utilisateur est l'owner du bot
 def is_owner(ctx):
