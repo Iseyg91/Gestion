@@ -1107,7 +1107,7 @@ class TicketView(ui.View):
         super().__init__(timeout=None)
         self.author_id = author_id
 
-    @ui.button(label="Support Finance", style=ButtonStyle.success, custom_id="open_ticket")
+    @ui.button(label="Support Finance", style=ButtonStyle.primary, custom_id="open_ticket")
     async def open_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
     
         guild = interaction.guild
@@ -1173,7 +1173,7 @@ async def panel(ctx):
     embed = discord.Embed(
         title="Support Finanace",
         description="Besoin d'aide ou de contacter un Trésorier pour un achat, une vente ou des questions fiscales ? Ouvrez un ticket !",
-        color=0x3498db
+        color=0x6A0DAD
     )
     
     # Ajouter une image à l'embed
