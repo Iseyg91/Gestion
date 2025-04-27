@@ -826,52 +826,52 @@ async def on_guild_update(before, after):
 class TicketModal(ui.Modal, title="Fermer le ticket"):
     reason = ui.TextInput(label="Raison de fermeture", style=discord.TextStyle.paragraph)
 
-async def on_submit(self, interaction: discord.Interaction):
-    channel = interaction.channel
-    guild = interaction.guild
-    reason = self.reason.value
+    async def on_submit(self, interaction: discord.Interaction):
+        channel = interaction.channel
+        guild = interaction.guild
+        reason = self.reason.value
 
-    transcript_channel = guild.get_channel(TRANSCRIPT_CHANNEL_ID)
+        transcript_channel = guild.get_channel(TRANSCRIPT_CHANNEL_ID)
 
-    # Génération du transcript
-    messages = [msg async for msg in channel.history(limit=None)]
-    transcript_text = "\n".join([
-        f"{msg.created_at.strftime('%Y-%m-%d %H:%M')} - {msg.author}: {msg.content}"
-        for msg in messages if msg.content
-    ])
-    file = discord.File(fp=io.StringIO(transcript_text), filename="transcript.txt")
+        # Génération du transcript
+        messages = [msg async for msg in channel.history(limit=None)]
+        transcript_text = "\n".join([
+            f"{msg.created_at.strftime('%Y-%m-%d %H:%M')} - {msg.author}: {msg.content}"
+            for msg in messages if msg.content
+        ])
+        file = discord.File(fp=io.StringIO(transcript_text), filename="transcript.txt")
 
-    # Récupération de qui a ouvert et claim
-    ether_ticket_data = collection62.find_one({"channel_id": str(channel.id)})
+        # Récupération de qui a ouvert et claim
+        ether_ticket_data = collection62.find_one({"channel_id": str(channel.id)})
 
-    opened_by = guild.get_member(int(ether_ticket_data["user_id"])) if ether_ticket_data else None
-    claimed_by = None
-    # Recherche dans le dernier message envoyé contenant l'embed de création
-    async for msg in channel.history(limit=50):
-        if msg.embeds:
-            embed = msg.embeds[0]
-            if embed.footer and "Claimé par" in embed.footer.text:
-                user_id = int(embed.footer.text.split("Claimé par ")[-1].replace(">", "").replace("<@", ""))
-                claimed_by = guild.get_member(user_id)
-                break
+        opened_by = guild.get_member(int(ether_ticket_data["user_id"])) if ether_ticket_data else None
+        claimed_by = None
+        # Recherche dans le dernier message envoyé contenant l'embed de création
+        async for msg in channel.history(limit=50):
+            if msg.embeds:
+                embed = msg.embeds[0]
+                if embed.footer and "Claimé par" in embed.footer.text:
+                    user_id = int(embed.footer.text.split("Claimé par ")[-1].replace(">", "").replace("<@", ""))
+                    claimed_by = guild.get_member(user_id)
+                    break
 
-    # Log dans le canal transcript
-    embed_log = discord.Embed(
-        title="📁 Ticket Fermé",
-        color=discord.Color.red()
-    )
-    embed_log.add_field(name="Ouvert par", value=opened_by.mention if opened_by else "Inconnu", inline=True)
-    embed_log.add_field(name="Claimé par", value=claimed_by.mention if claimed_by else "Non claim", inline=True)
-    embed_log.add_field(name="Fermé par", value=interaction.user.mention, inline=True)
-    embed_log.add_field(name="Raison", value=reason, inline=False)
-    embed_log.set_footer(text=f"Ticket: {channel.name} | ID: {channel.id}")
-    embed_log.timestamp = discord.utils.utcnow()
+        # Log dans le canal transcript
+        embed_log = discord.Embed(
+            title="📁 Ticket Fermé",
+            color=discord.Color.red()
+        )
+        embed_log.add_field(name="Ouvert par", value=opened_by.mention if opened_by else "Inconnu", inline=True)
+        embed_log.add_field(name="Claimé par", value=claimed_by.mention if claimed_by else "Non claim", inline=True)
+        embed_log.add_field(name="Fermé par", value=interaction.user.mention, inline=True)
+        embed_log.add_field(name="Raison", value=reason, inline=False)
+        embed_log.set_footer(text=f"Ticket: {channel.name} | ID: {channel.id}")
+        embed_log.timestamp = discord.utils.utcnow()
 
-    await transcript_channel.send(embed=embed_log, file=file)
+        await transcript_channel.send(embed=embed_log, file=file)
 
-    # Suppression du channel
-    await interaction.response.send_message("✅ Ticket fermé.", ephemeral=True)
-    await channel.delete()
+        # Suppression du channel
+        await interaction.response.send_message("✅ Ticket fermé.", ephemeral=True)
+        await channel.delete()
 
 # --- VIEW AVEC CLAIM & FERMETURE ---
 class ClaimCloseView(ui.View):
