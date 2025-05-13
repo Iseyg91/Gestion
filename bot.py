@@ -174,9 +174,9 @@ async def on_message(message):
 #Bienvenue : Message de Bienvenue + Ghost Ping Join
 private_threads = {}  # Stocke les fils privés des nouveaux membres
 
-# Liste des salons à pinguer
+# Liste des salons à ping
 salon_ids = [
-    1355158116903419997
+    1371811909183213639
 ]
 
 class GuideView(View):
