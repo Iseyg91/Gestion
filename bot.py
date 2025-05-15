@@ -327,39 +327,6 @@ async def on_member_join(member):
                 except discord.HTTPException:
                     print("Une erreur est survenue lors de l'envoi du message.")
 
-        # Création d'un fil privé pour le membre
-        channel_id = 1355198748296351854  # Remplace par l'ID du salon souhaité
-        channel = bot.get_channel(channel_id)
-
-        if channel and isinstance(channel, discord.TextChannel):
-            thread = await channel.create_thread(name=f"🎉 Bienvenue {member.name} !", type=discord.ChannelType.private_thread)
-            await thread.add_user(member)
-            private_threads[member.id] = thread
-
-            # Embed de bienvenue
-            welcome_embed = discord.Embed(
-                title="🌌 Bienvenue à Etherya !",
-                description=(
-                    "Une aventure unique t'attend, entre **économie dynamique**, **stratégies** et **opportunités**. "
-                    "Prêt à découvrir tout ce que le serveur a à offrir ?"
-                ),
-                color=discord.Color.blue()
-            )
-            welcome_embed.set_thumbnail(url=member.avatar.url if member.avatar else bot.user.avatar.url)
-            await thread.send(embed=welcome_embed)
-
-            # Embed du guide
-            guide_embed = discord.Embed(
-                title="📖 Besoin d'un Guide ?",
-                description=(
-                    "Nous avons préparé un **Guide de l'Économie** pour t'aider à comprendre notre système monétaire et "
-                    "les différentes façons d'évoluer. Veux-tu le suivre ?"
-                ),
-                color=discord.Color.gold()
-            )
-            guide_embed.set_footer(text="Tu peux toujours y accéder plus tard via la commande /guide ! 🚀")
-            await thread.send(embed=guide_embed, view=GuideView(thread))  # Envoie le guide immédiatement
-
         # Envoi d'une notification de log dans le salon spécifique du serveur
         if member.guild.id == ETHERYA_SERVER_ID:
             channel = get_log_channel(member.guild, "utilisateurs")
@@ -385,7 +352,7 @@ async def guide_command(interaction: discord.Interaction):
         return
 
     # Crée un nouveau thread privé à chaque commande
-    channel_id = 1355158120095027220
+    channel_id = 1355198748296351854
     channel = bot.get_channel(channel_id)
 
     if not channel:
